@@ -132,3 +132,22 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
 ]
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'LOGIN_URL': None,
+    'LOGOUT_URL': None,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter token in format: Bearer <your_token>',
+        }
+    },
+}

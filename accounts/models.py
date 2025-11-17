@@ -5,7 +5,7 @@ from accounts.manager import UserManager
 from accounts.enum import UserRole
 
 class User(AbstractUser):
-    username = models.CharField(max_length=150, unique=True)
+    username = None
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, null=True, blank=True)
     role = models.CharField(
@@ -21,7 +21,7 @@ class User(AbstractUser):
     objects = UserManager()
 
     def __str__(self):
-        return self.username
+        return self.email
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['full_name', 'role']

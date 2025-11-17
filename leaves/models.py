@@ -6,15 +6,12 @@ class Leave(models.Model):
     LEAVE_TYPES = (
         ('casual', 'Casual'),
         ('sick', 'Sick'),
-        
     )
-    
     STATUS_CHOICES = (
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     )
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leaves')
     leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES)
     start_date = models.DateField()

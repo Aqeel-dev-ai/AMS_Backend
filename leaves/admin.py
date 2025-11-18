@@ -29,5 +29,3 @@ class LeaveAdmin(admin.ModelAdmin):
         'updated_at',
     )
     ordering = ('-applied_at',)
-
-   

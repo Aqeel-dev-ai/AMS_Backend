@@ -9,8 +9,7 @@ class RoleBasedLeavePermission(permissions.BasePermission):
             return False
 
         if action == 'create':  
-            return user.role in ['employee', 'team_lead']
-
+            return user.role in ['employee', 'team_lead', 'admin']
         if action in ['list', 'retrieve']:
             return True  
 
@@ -31,13 +30,17 @@ class RoleBasedLeavePermission(permissions.BasePermission):
             return obj.user == user
 
         if action in ['approve', 'reject']:
-            if user.role == 'admin':
-                return True
-            if user.role == 'team_lead' and obj.user.role == 'employee':
+            if obj.user == user:
+                return False
+            if user.role in ['admin', 'team_lead']:
                 return True
             return False
 
         if action == 'edit':
-            return obj.user == user and obj.status == 'pending'
+            if obj.user == user:
+                return True
+            if obj.user != user and hasattr(obj, 'applied_by'):
+                return obj.applied_by == user  
+            return False
 
         return obj.user == user

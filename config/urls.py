@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('config.swagger')),
     path('api/v1/accounts/', include('accounts.urls')),
+    path('api/v1/leaves/', include('leaves.urls')),
 ]
 
 if settings.DEBUG:

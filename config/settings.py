@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'rest_registration',
     'drf_yasg',
     'accounts',
+    'leaves',
 ]
 
 MIDDLEWARE = [

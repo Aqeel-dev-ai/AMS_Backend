@@ -6,10 +6,12 @@ class LeaveAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'user',
+        'applied_by',
         'leave_type',
         'start_date',
         'end_date',
         'status',
+        'admin_comment',
         'applied_at',
     )
     list_filter = (
@@ -26,7 +28,6 @@ class LeaveAdmin(admin.ModelAdmin):
         'applied_at',
         'updated_at',
     )
-
     ordering = ('-applied_at',)
 
    

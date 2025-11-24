@@ -1,5 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
+import os
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,10 +12,11 @@ SECRET_KEY = 'django-insecure-&pdpo+5$+u*0wofsa_9p@_er1isjd*5ep&nff=8y*@bc6^#ah2
 
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-]
+from dotenv import load_dotenv
+load_dotenv()
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS.split(",") if host.strip()]
 
 
 # Application definition
@@ -33,6 +35,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'accounts',
     'leaves',
+    'projects',
 ]
 
 MIDDLEWARE = [
@@ -128,16 +131,17 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost',
-    'http://127.0.0.1',
-]
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False") == "True"
+
+csrf_trusted = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [c.strip() for c in csrf_trusted.split(",") if c.strip()]
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
+
+SWAGGER_BASE_URL = os.getenv("SWAGGER_BASE_URL", "")
 
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,

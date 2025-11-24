@@ -1,3 +1,32 @@
 from django.contrib import admin
+from .models import Leave
 
-# Register your models here.
+@admin.register(Leave)
+class LeaveAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'leave_type',
+        'start_date',
+        'end_date',
+        'status',
+        'applied_at',
+    )
+    list_filter = (
+        'leave_type',
+        'status',
+        'applied_at',
+    )
+    search_fields = (
+        'user__username',
+        'user__email',
+        'reason',
+    )
+    readonly_fields = (
+        'applied_at',
+        'updated_at',
+    )
+
+    ordering = ('-applied_at',)
+
+   

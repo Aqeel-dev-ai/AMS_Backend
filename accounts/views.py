@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
-from accounts.serializers import UserSerializer, UserProfileSerializer, ChangePasswordSerializer
+from accounts.serializers import UserSerializer, UserProfileSerializer, ChangePasswordSerializer, CreateUserSerializer
 from accounts.models import User
 from accounts.enum import UserRole, UserDesignation
 
@@ -68,6 +68,38 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    
+    def get_serializer_class(self):
+        """
+        Use CreateUserSerializer for user creation to handle password generation and email.
+        Use UserSerializer for other operations.
+        """
+        if self.action == 'create':
+            return CreateUserSerializer
+        return UserSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to provide feedback on email sending status.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        # Get the email status from the user instance
+        email_sent = getattr(user, 'email_sent', False)
+        
+        # Use UserSerializer for the response to include all user data
+        response_serializer = UserSerializer(user)
+        
+        response_data = {
+            'message': 'User created successfully.',
+            'email_sent': email_sent,
+            'email_status': 'Email sent successfully with login credentials.' if email_sent else 'User created but email could not be sent. Please share credentials manually.',
+            'user': response_serializer.data
+        }
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
     
     def get_permissions(self):
         """

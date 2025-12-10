@@ -11,21 +11,24 @@ class LeaveAdmin(admin.ModelAdmin):
         'start_date',
         'end_date',
         'status',
-        'admin_comment',
         'applied_at',
     )
     list_filter = (
         'leave_type',
         'status',
+        'start_date',
         'applied_at',
     )
     search_fields = (
-        'user__username',
         'user__email',
+        'user__full_name',
+        'applied_by__email',
         'reason',
     )
     readonly_fields = (
         'applied_at',
         'updated_at',
     )
+    date_hierarchy = 'start_date'
     ordering = ('-applied_at',)
+    list_per_page = 25

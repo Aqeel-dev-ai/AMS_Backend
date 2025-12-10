@@ -8,6 +8,9 @@ urlpatterns = [
     path('', include('config.swagger')),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/v1/leaves/', include('leaves.urls')),
+    path('api/v1/projects/', include('projects.urls')),
+    path('api/v1/attendance/', include('attendance.urls')),
+    path('api/v1/timesheet/', include('timesheet.urls')),
 ]
 
 if settings.DEBUG:

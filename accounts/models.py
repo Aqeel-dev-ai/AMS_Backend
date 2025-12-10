@@ -2,15 +2,22 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from accounts.manager import UserManager
-from accounts.enum import UserRole
+from accounts.enum import UserRole, UserDesignation
 
 class User(AbstractUser):
-    username = None
+    # username field is inherited from AbstractUser
+    username = models.CharField(max_length=150, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, null=True, blank=True)
     role = models.CharField(
         max_length=50,
         choices=UserRole.choices,
+    )
+    designation = models.CharField(
+        max_length=50,
+        choices=UserDesignation.choices,
+        null=True,
+        blank=True,
     )
     profile_picture = models.ImageField(
         upload_to='profile_pictures/',

@@ -11,7 +11,7 @@ class LeaveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Leave
         fields = '__all__'
-        read_only_fields = ('applied_at', 'updated_at', 'status', 'admin_comment')
+        read_only_fields = ('applied_at', 'updated_at')
 
     def validate(self, data):
         start = data.get('start_date')

@@ -23,3 +23,11 @@ class Leave(models.Model):
     admin_comment = models.TextField(blank=True, null=True)
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.leave_type} ({self.start_date} to {self.end_date})"
+
+    class Meta:
+        ordering = ['-applied_at']
+        verbose_name = 'Leave'
+        verbose_name_plural = 'Leaves'

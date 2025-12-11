@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from accounts.models import User
-from accounts.utils import generate_random_password, send_welcome_email
+from accounts.utils import generate_random_password, send_credentials_email
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,10 +8,6 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CreateUserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating new users.
-    Automatically generates a password and sends it via email.
-    """
     class Meta:
         model = User
         fields = ['email', 'full_name', 'role', 'designation', 'username', 'profile_picture']
@@ -19,34 +15,32 @@ class CreateUserSerializer(serializers.ModelSerializer):
             'username': {'required': False},
             'profile_picture': {'required': False},
         }
-    
+
     def create(self, validated_data):
-        # Generate a random password
+        # Generate secure random password
         password = generate_random_password()
-        
-        # Create the user with the generated password
+
+        # Create user (password is hashed automatically by create_user)
         user = User.objects.create_user(
             email=validated_data['email'],
             password=password,
             full_name=validated_data.get('full_name', ''),
             role=validated_data['role'],
-            designation=validated_data.get('designation'),
-            username=validated_data.get('username'),
+            designation=validated_data.get('designation', ''),
+            username=validated_data.get('username') or validated_data['email'],  # fallback
             profile_picture=validated_data.get('profile_picture'),
         )
-        
-        # Send welcome email with credentials
-        email_sent = send_welcome_email(
+
+        # Send minimal credentials email and capture status
+        email_sent = send_credentials_email(
             user_email=user.email,
-            user_name=user.full_name or user.email,
             password=password
         )
         
-        # Store email status in the instance (not in DB, just for response)
+        # Attach email status to user instance (not saved to DB, just for response)
         user.email_sent = email_sent
-        
-        return user
 
+        return user
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for user profile updates.

@@ -182,3 +182,35 @@ class UserViewSet(viewsets.ModelViewSet):
         def has_permission(self, request, view):
             return request.user and request.user.is_authenticated and request.user.role == UserRole.ADMIN
 
+
+class RegisterView(APIView):
+    """
+    Register a new user (Admin only).
+    Generates password automatically and sends it via email.
+    """
+    permission_classes = [IsAuthenticated] # We will add custom admin permission check
+
+    def post(self, request):
+        # Check for admin permission
+        if not (request.user and request.user.is_authenticated and request.user.role == UserRole.ADMIN):
+             return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = CreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # Get the email status from the user instance
+            email_sent = getattr(user, 'email_sent', False)
+            
+            response_data = {
+                'message': 'User registered successfully.',
+                'email_sent': email_sent,
+                'email_status': 'Email sent successfully with login credentials.' if email_sent else 'User registered but email could not be sent. Please share credentials manually.',
+                'user': UserSerializer(user).data
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

@@ -11,7 +11,7 @@ def generate_random_password():
     lowercase = string.ascii_lowercase
     uppercase = string.ascii_uppercase
     digits = string.digits
-    special = "!@#$%^&*"
+    special = "@#"
 
     # Ensure at least one of each type
     password = [
@@ -21,11 +21,9 @@ def generate_random_password():
         secrets.choice(special),
     ]
 
-    # Fill remaining 4 characters randomly
     all_chars = lowercase + uppercase + digits + special
     password += [secrets.choice(all_chars) for _ in range(4)]
 
-    # Shuffle and return as 8-char string
     secrets.SystemRandom().shuffle(password)
     return ''.join(password)
 

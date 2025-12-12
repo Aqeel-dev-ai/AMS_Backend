@@ -17,28 +17,36 @@ class CreateUserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        # Generate secure random password
+        # Generate secure random password FIRST
         password = generate_random_password()
+        email = validated_data['email']
 
-        # Create user (password is hashed automatically by create_user)
+        # TRY TO SEND EMAIL FIRST - before creating user
+        # This prevents creating orphaned users when email fails
+        email_sent = send_credentials_email(
+            user_email=email,
+            password=password
+        )
+        
+        # If email fails, raise validation error and DO NOT create user
+        if not email_sent:
+            raise serializers.ValidationError({
+                'email': 'Failed to send credentials email. User not created. Please check email configuration and try again.'
+            })
+
+        # Email sent successfully - NOW create the user
         user = User.objects.create_user(
-            email=validated_data['email'],
+            email=email,
             password=password,
             full_name=validated_data.get('full_name', ''),
             role=validated_data['role'],
             designation=validated_data.get('designation', ''),
-            username=validated_data.get('username') or validated_data['email'],  # fallback
+            username=validated_data.get('username') or email,  # fallback
             profile_picture=validated_data.get('profile_picture'),
         )
-
-        # Send minimal credentials email and capture status
-        email_sent = send_credentials_email(
-            user_email=user.email,
-            password=password
-        )
         
-        # Attach email status to user instance (not saved to DB, just for response)
-        user.email_sent = email_sent
+        # Attach email status to user instance (for response)
+        user.email_sent = True  # We know it's True because we checked above
 
         return user
 class UserProfileSerializer(serializers.ModelSerializer):

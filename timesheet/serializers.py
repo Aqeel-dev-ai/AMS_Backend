@@ -22,7 +22,7 @@ class TimeEntrySerializer(serializers.ModelSerializer):
             'id', 'user', 'user_id', 'task', 'task_description', 
             'project', 'project_id', 'project_name', 'project_details',
             'start_time', 'end_time', 'duration', 'duration_formatted',
-            'date', 'is_running'
+            'date', 'is_running', 'status'
         ]
         read_only_fields = ['user', 'duration', 'date']
     
@@ -121,6 +121,7 @@ class StartTimerSerializer(serializers.Serializer):
     task = serializers.CharField(max_length=255)
     projectId = serializers.IntegerField(required=False, allow_null=True)
     startTime = serializers.DateTimeField()
+    status = serializers.CharField(required=False, default='in_progress')
     
     def validate_startTime(self, value):
         """Ensure start time is not in the future"""

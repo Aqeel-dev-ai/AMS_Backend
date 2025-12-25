@@ -59,7 +59,8 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
             task=serializer.validated_data['task'],
             project=serializer.validated_data.get('project'),
             start_time=serializer.validated_data['startTime'],
-            is_running=True
+            is_running=True,
+            status=serializer.validated_data.get('status', 'in_progress')
         )
         
         # Return timer state

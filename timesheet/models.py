@@ -26,6 +26,15 @@ class TimeEntry(models.Model):
     duration = models.DurationField(null=True, blank=True)
     date = models.DateField(db_index=True)
     is_running = models.BooleanField(default=False, db_index=True)
+    STATUS_CHOICES = [
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='in_progress'
+    )
     
     class Meta:
         ordering = ['-start_time']

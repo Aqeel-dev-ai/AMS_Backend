@@ -1,40 +1,60 @@
 from rest_framework import serializers
 from django.utils import timezone
 from datetime import date
+from django.db.models import Sum
 from .models import Team, Project, Task
+from timesheet.models import TimeEntry
+from django.db import models
 
 
 class TeamSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Team model.
-    Includes nested team lead details (id, full_name, email).
-    Only admins can create teams.
-    """
-    team_lead_details = serializers.SerializerMethodField(read_only=True)
-    
+
     class Meta:
         model = Team
         fields = '__all__'
         read_only_fields = ['created_at']
 
-    def get_team_lead_details(self, obj):
-        """Return team lead details including id, full_name, and email."""
-        if obj.team_lead:
-            return {
-                'id': obj.team_lead.id,
-                'full_name': obj.team_lead.full_name,
-                'username': obj.team_lead.email, 
-                'email': obj.team_lead.email,
+    def to_representation(self, instance):
+        """
+        Override to_representation to return full objects for team_lead and members.
+        """
+        response = super().to_representation(instance)
+        
+        # Team Lead Details
+        if instance.team_lead:
+            response['team_lead'] = {
+                'id': instance.team_lead.id,
+                'full_name': instance.team_lead.full_name,
+                'username': instance.team_lead.email, 
+                'email': instance.team_lead.email,
+                'role': instance.team_lead.role,
+
             }
-        return None
+        
+        # Members Details
+        members_data = []
+        for member in instance.members.all():
+            members_data.append({
+                'id': member.id,
+                'full_name': member.full_name,
+                'username': member.email,
+                'email': member.email,
+                'role': member.role,
+                'designation': member.designation,
+
+            })
+        response['members'] = members_data
+        
+        return response
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Project model.
-    Includes team name as a read-only field.
-    """
     team_name = serializers.SerializerMethodField(read_only=True)
+    total_time = serializers.SerializerMethodField(read_only=True)
+    total_tasks = serializers.SerializerMethodField(read_only=True)
+    completed_tasks = serializers.SerializerMethodField(read_only=True)
+    in_progress_tasks = serializers.SerializerMethodField(read_only=True)
+    user_time_breakdown = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = Project
@@ -42,18 +62,75 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at']
 
     def get_team_name(self, obj):
-        """Return the name of the team assigned to this project."""
         return obj.team.name if obj.team else None
 
+    def get_total_time(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user'):
+            return "0h 0m"
+
+        user = request.user
+        time_entries = TimeEntry.objects.filter(project=obj)
+
+        if hasattr(user, 'role') and user.role == 'employee':
+            time_entries = time_entries.filter(user=user)
+        
+        # Calculate total duration
+        total_duration = time_entries.aggregate(total=Sum('duration'))['total']
+        
+        if total_duration:
+            total_seconds = int(total_duration.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            return f"{hours}h {minutes}m"
+        
+        return "0h 0m"
+
+    def get_total_tasks(self, obj):
+        return TimeEntry.objects.filter(project=obj).count()
+
+    def get_completed_tasks(self, obj):
+        return TimeEntry.objects.filter(project=obj, status='completed').count()
+
+    def get_in_progress_tasks(self, obj):
+        """Return number of in-progress time entries (tasks) for this project."""
+        return TimeEntry.objects.filter(project=obj, status='in_progress').count()
+
+    def get_user_time_breakdown(self, obj):
+        """Return time breakdown per user for this project."""
+        from django.db.models import Sum
+        
+        user_times = TimeEntry.objects.filter(project=obj).values(
+            'user__id', 'user__full_name', 'user__email'
+        ).annotate(
+            total_duration=Sum('duration')
+        ).order_by('-total_duration')
+        
+        breakdown = []
+        for entry in user_times:
+            if entry['total_duration']:
+                total_seconds = int(entry['total_duration'].total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                breakdown.append({
+                    'user_id': entry['user__id'],
+                    'user_name': entry['user__full_name'],
+                    'user_email': entry['user__email'],
+                    'total_time': f"{hours}h {minutes}m",
+                    'total_seconds': total_seconds
+                })
+        
+        return breakdown
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        if instance.team:
+            response['team'] = TeamSerializer(instance.team).data
+        return response
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Task model.
-    Includes project_name, assigned_to_name, and created_by_name as read-only fields.
-    """
     project_name = serializers.SerializerMethodField(read_only=True)
-    assigned_to_name = serializers.SerializerMethodField(read_only=True)
     created_by_name = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
@@ -62,52 +139,19 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at', 'created_by']
 
     def get_project_name(self, obj):
-        """Return the name of the project this task belongs to."""
         return obj.project.name if obj.project else None
 
-    def get_assigned_to_name(self, obj):
-        """Return the full name of the user assigned to this task."""
-        return obj.assigned_to.full_name if obj.assigned_to else None
-
     def get_created_by_name(self, obj):
-        """Return the full name of the user who created this task."""
         return obj.created_by.full_name if obj.created_by else None
 
     def validate_due_date(self, value):
-        """
-        Ensure due_date is not in the past during creation.
-        """
-        # Only validate for creation, not updates
         if not self.instance and value < date.today():
             raise serializers.ValidationError(
                 "Due date cannot be in the past."
             )
         return value
 
-    def validate(self, data):
-        """
-        Ensure assigned_to user is a member of the team assigned to the project.
-        """
-        project = data.get('project') or (self.instance.project if self.instance else None)
-        assigned_to = data.get('assigned_to') or (self.instance.assigned_to if self.instance else None)
-        
-        if project and assigned_to:
-            # Check if assigned_to user is a member of the project's team
-            team_member_ids = project.team.members.values_list('id', flat=True)
-            assigned_to_id = assigned_to.id if hasattr(assigned_to, 'id') else assigned_to
-            
-            if assigned_to_id not in team_member_ids:
-                raise serializers.ValidationError({
-                    'assigned_to': f"User must be a member of the project's team ({project.team.name})."
-                })
-        
-        return data
-
     def create(self, validated_data):
-        """
-        Set created_by to the current user when creating a task.
-        """
-        # Get the current user from the request context
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             validated_data['created_by'] = request.user

@@ -20,7 +20,7 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ['id','title', 'project', 'assigned_to', 'status', 'priority', 'due_date', 'created_at']
+    list_display = ['id','title', 'project', 'status', 'priority', 'due_date', 'created_at']
     list_filter = ['status', 'priority', 'created_at']
-    search_fields = ['title', 'description', 'assigned_to']
+    search_fields = ['title', 'description']
     date_hierarchy = 'due_date'

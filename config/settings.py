@@ -154,19 +154,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# =========================================
-# INTERNATIONALIZATION
-# =========================================
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Karachi"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
-# =========================================
-# STATIC & MEDIA
-# =========================================
 
 STATIC_URL = "/static/"
 

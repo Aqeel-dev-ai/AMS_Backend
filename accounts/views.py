@@ -5,7 +5,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from accounts.serializers import UserSerializer, UserProfileSerializer, ChangePasswordSerializer, CreateUserSerializer
 from accounts.models import User
-from accounts.enum import UserRole, UserDesignation
+from config.enums import UserRole, UserDesignation
 
 
 class UserView(APIView):

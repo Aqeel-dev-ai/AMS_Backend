@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
-from accounts.enum import UserRole
+from config.enums import UserRole
 from .models import Leave
 from .serializers import LeaveSerializer, LeaveActionSerializer
 from .permissions import RoleBasedLeavePermission

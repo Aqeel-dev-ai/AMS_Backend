@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from accounts.enum import UserRole
+from config.enums import UserRole
 
 
 class IsAdminUser(permissions.BasePermission):

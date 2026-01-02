@@ -11,6 +11,7 @@ from accounts.models import User
 from config.enums import AttendanceStatus
 from django.utils import timezone
 from projects.models import Team
+from django.utils.timezone import localtime
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
@@ -43,8 +44,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 "currentBreak": None,
             })
 
-        # Convert to local timezone before formatting
-        from django.utils.timezone import localtime
         
         return Response({
             "isDayStarted": True,

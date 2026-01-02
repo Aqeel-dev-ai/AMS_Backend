@@ -5,15 +5,6 @@ from datetime import timedelta
 
 
 def format_duration_as_hms(duration):
-    """
-    Format a timedelta as "HH:MM:SS" string.
-    
-    Args:
-        duration: timedelta object
-        
-    Returns:
-        str: Formatted duration string (e.g., "08:30:00")
-    """
     if not duration:
         return "00:00:00"
     

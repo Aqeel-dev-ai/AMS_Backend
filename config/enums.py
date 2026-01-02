@@ -1,5 +1,13 @@
 from django.db import models
 
+
+class AttendanceStatus(models.TextChoices):
+    PRESENT = "present", "Present"
+    ABSENT = "absent", "Absent"
+    BREAK = "break", "Break"
+    LEAVE = "leave", "Leave"
+    OFFLINE = "offline", "Offline"
+
 class UserRole(models.TextChoices):
     ADMIN = "admin", "Admin"
     TEAM_LEAD = "team_lead", "Team Lead"
@@ -16,3 +24,12 @@ class UserDesignation(models.TextChoices):
     HR = "hr", "HR"
     QA = "qa", "Quality Assurance"
     DEVOPS = "devops", "DevOps Engineer"
+
+class LeaveType(models.TextChoices):
+    CASUAL = "casual", "Casual"
+    SICK = "sick", "Sick"
+
+class LeaveStatus(models.TextChoices):  
+    PENDING = "pending", "Pending"
+    APPROVED = "approved", "Approved"
+    REJECTED = "rejected", "Rejected"

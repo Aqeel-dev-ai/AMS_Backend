@@ -89,49 +89,51 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+from timesheet.models import TimeEntry
+from timesheet.serializers import TimeEntrySerializer
+
 class TaskViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Task model.
-    Provides CRUD operations for tasks with role-based permissions.
-    Supports filtering by status, priority, assigned_to, and project.
+    ViewSet for Task model (Now served by TimeEntry).
+    Provides CRUD operations for tasks (time entries) with role-based permissions.
     """
-    queryset = Task.objects.all()
-    serializer_class = TaskSerializer
+    queryset = TimeEntry.objects.all()
+    serializer_class = TimeEntrySerializer
     permission_classes = [TaskPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'priority', 'assigned_to', 'project']
-    search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'updated_at', 'due_date', 'priority']
-    ordering = ['-created_at']
+    filterset_fields = ['status', 'project', 'user']
+    search_fields = ['task', 'project__name']
+    ordering_fields = ['start_time', 'date', 'status']
+    ordering = ['-start_time']
 
     def get_queryset(self):
         """
         Filter queryset based on user role.
-        - Admin: sees all tasks
-        - Team Lead: sees tasks for projects in teams they lead or are members of
-        - Employee: sees tasks for projects in teams they are members of
+        - Admin: sees all time entries
+        - Team Lead: sees all time entries for projects in teams they lead or are members of
+        - Employee: sees only their own time entries
         """
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Admin sees all tasks
+        # Admin sees all time entries
         if hasattr(user, 'role') and user.role == 'admin':
             return queryset
         
-        # Team Lead sees tasks for projects in teams they lead or are members of
+        # Team Lead sees all time entries for projects in teams they lead or are members of
         if hasattr(user, 'role') and user.role == 'team_lead':
             return queryset.filter(
                 models.Q(project__team__team_lead=user) | models.Q(project__team__members=user)
             ).distinct()
         
-        # Employee sees tasks for projects in teams they are members of
+        # Employee sees only their own time entries
         if hasattr(user, 'role') and user.role == 'employee':
-            return queryset.filter(project__team__members=user).distinct()
+            return queryset.filter(user=user).distinct()
         
         return queryset
 
     def perform_create(self, serializer):
         """
-        Set created_by to the current user when creating a task.
+        Set user to the current user when creating a time entry (task).
         """
-        serializer.save(created_by=self.request.user)
+        serializer.save(user=self.request.user)

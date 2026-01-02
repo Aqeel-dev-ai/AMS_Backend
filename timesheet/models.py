@@ -5,27 +5,19 @@ from datetime import timedelta
 
 
 class TimeEntry(models.Model):
-    """
-    Time entry model for tracking time spent on tasks/projects.
-    """
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='time_entries'
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='time_entries')
     task = models.CharField(max_length=255, help_text='Task description')
-    project = models.ForeignKey(
-        'projects.Project',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='time_entries'
-    )
+    project = models.ForeignKey('projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='time_entries')
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     duration = models.DurationField(null=True, blank=True)
     date = models.DateField(db_index=True)
     is_running = models.BooleanField(default=False, db_index=True)
+    STATUS_CHOICES = [
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
     
     class Meta:
         ordering = ['-start_time']
@@ -41,7 +33,6 @@ class TimeEntry(models.Model):
     
     @property
     def elapsed_minutes(self):
-        """Calculate elapsed time in minutes for running timer"""
         if self.is_running and self.start_time:
             elapsed = timezone.now() - self.start_time
             return int(elapsed.total_seconds() / 60)
@@ -50,18 +41,15 @@ class TimeEntry(models.Model):
         return 0
     
     def calculate_duration(self):
-        """Calculate duration when timer stops"""
         if self.end_time and self.start_time:
             self.duration = self.end_time - self.start_time
             return self.duration
         return None
     
     def save(self, *args, **kwargs):
-        # Auto-set date from start_time
         if self.start_time and not self.date:
             self.date = self.start_time.date()
         
-        # Auto-calculate duration if end_time exists
         if self.end_time and not self.is_running:
             self.calculate_duration()
         

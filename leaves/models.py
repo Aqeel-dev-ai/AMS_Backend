@@ -1,25 +1,16 @@
 from django.db import models
 from accounts.models import User
 from django.utils import timezone
+from config.enums import LeaveType, LeaveStatus
 
-class Leave(models.Model):
-    LEAVE_TYPES = (
-        ('casual', 'Casual'),
-        ('sick', 'Sick'),
-    )
-    STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
-    )
+class Leave(models.Model):   
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leaves')
-    applied_by = models.ForeignKey(
-    User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applied_leaves')
-    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES)
+    applied_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applied_leaves')
+    leave_type = models.CharField(max_length=20, choices=LeaveType.choices)
     start_date = models.DateField()
     end_date = models.DateField()
     reason = models.TextField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=10, choices=LeaveStatus.choices, default=LeaveStatus.PENDING)
     admin_comment = models.TextField(blank=True, null=True)
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

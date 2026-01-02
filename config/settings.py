@@ -55,10 +55,12 @@ INSTALLED_APPS = [
     "projects",
     "attendance",
     "timesheet",
+    'debug_toolbar',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # must be near top
+    "corsheaders.middleware.CorsMiddleware",  
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -67,6 +69,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -151,19 +154,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# =========================================
-# INTERNATIONALIZATION
-# =========================================
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Karachi"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
-# =========================================
-# STATIC & MEDIA
-# =========================================
 
 STATIC_URL = "/static/"
 

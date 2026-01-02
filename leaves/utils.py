@@ -10,4 +10,10 @@ def update_leave_status(leave, new_status, comment=None, allowed_status='pending
         leave.admin_comment = comment
     leave.save()
     
+    # If leave is approved, handle attendance records
+    if new_status == 'approved':
+        from attendance.services import handle_approved_leave
+        handle_approved_leave(leave)
+    
     return leave
+

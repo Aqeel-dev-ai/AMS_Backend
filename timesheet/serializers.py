@@ -22,19 +22,13 @@ class TimeEntrySerializer(serializers.ModelSerializer):
             'id', 'user', 'user_id', 'task', 'task_description', 
             'project', 'project_id', 'project_name', 'project_details',
             'start_time', 'end_time', 'duration', 'duration_formatted',
-            'date', 'is_running'
+            'date', 'is_running', 'status'
         ]
         read_only_fields = ['user', 'duration', 'date']
     
     def to_internal_value(self, data):
-        """
-        Transform camelCase input to snake_case for model fields.
-        Handle projectId -> project conversion.
-        """
-        # Create a mutable copy
         internal_data = {}
         
-        # Map camelCase to snake_case
         field_mapping = {
             'projectId': 'project',
             'startTime': 'start_time',
@@ -46,7 +40,6 @@ class TimeEntrySerializer(serializers.ModelSerializer):
             if key in field_mapping:
                 mapped_key = field_mapping[key]
                 
-                # Special handling for projectId - convert to project object
                 if key == 'projectId' and value is not None:
                     from projects.models import Project
                     try:
@@ -121,6 +114,7 @@ class StartTimerSerializer(serializers.Serializer):
     task = serializers.CharField(max_length=255)
     projectId = serializers.IntegerField(required=False, allow_null=True)
     startTime = serializers.DateTimeField()
+    status = serializers.CharField(required=False, default='in_progress')
     
     def validate_startTime(self, value):
         """Ensure start time is not in the future"""

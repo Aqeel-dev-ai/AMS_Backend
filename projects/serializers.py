@@ -15,9 +15,6 @@ class TeamSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at']
 
     def to_representation(self, instance):
-        """
-        Override to_representation to return full objects for team_lead and members.
-        """
         response = super().to_representation(instance)
         
         # Team Lead Details
@@ -25,7 +22,7 @@ class TeamSerializer(serializers.ModelSerializer):
             response['team_lead'] = {
                 'id': instance.team_lead.id,
                 'full_name': instance.team_lead.full_name,
-                'username': instance.team_lead.email, 
+                'username': instance.team_lead.username, 
                 'email': instance.team_lead.email,
                 'role': instance.team_lead.role,
 
@@ -37,13 +34,19 @@ class TeamSerializer(serializers.ModelSerializer):
             members_data.append({
                 'id': member.id,
                 'full_name': member.full_name,
-                'username': member.email,
+                'username': member.username,
                 'email': member.email,
                 'role': member.role,
                 'designation': member.designation,
 
             })
         response['members'] = members_data
+        
+        # Team Count (team lead + members)
+        team_count = instance.members.count()
+        if instance.team_lead:
+            team_count += 1
+        response['team_count'] = team_count
         
         return response
 

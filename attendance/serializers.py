@@ -1,18 +1,17 @@
 from rest_framework import serializers
 from django.utils import timezone
+from datetime import timedelta
 from .models import Attendance, AttendanceBreak
 from .utils import format_duration_as_hms
+from config.enums import AttendanceStatus
 
 
-# ---------------------------
-# Attendance Break Serializer
-# ---------------------------
 class AttendanceBreakSerializer(serializers.ModelSerializer):
     duration = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AttendanceBreak
-        fields = ["id", "break_start", "break_end", "duration", "created_at"]
+        fields = ["id", "attendance", "break_start", "break_end", "duration", "created_at"]
         read_only_fields = ["id", "created_at", "duration"]
 
     def get_duration(self, obj):
@@ -24,30 +23,34 @@ class AttendanceBreakSerializer(serializers.ModelSerializer):
             return f"{hours:02d}:{minutes:02d}:{secs:02d}"
         return "00:00:00"
 
+    def create(self, validated_data):
+        # When creating a break, update attendance status to BREAK
+        attendance = validated_data['attendance']
+        attendance.status = AttendanceStatus.BREAK
+        attendance.save(update_fields=['status'])
+        return super().create(validated_data)
 
-# ---------------------------
-# Attendance Serializer
-# ---------------------------
+    def update(self, instance, validated_data):
+        # When ending a break (setting break_end), update attendance status to PRESENT
+        instance = super().update(instance, validated_data)
+        if instance.break_end:
+            attendance = instance.attendance
+            attendance.status = AttendanceStatus.PRESENT
+            attendance.save(update_fields=['status'])
+        return instance
+
+
 class AttendanceSerializer(serializers.ModelSerializer):
-    # user info (read-only)
     user_id = serializers.IntegerField(source="user.id", read_only=True)
-    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", read_only=True)
     profile_picture = serializers.SerializerMethodField(read_only=True)
-
-    # relations
     breaks = AttendanceBreakSerializer(many=True, read_only=True)
-
-    # display fields
     start_time_display = serializers.SerializerMethodField(read_only=True)
     end_time_display = serializers.SerializerMethodField(read_only=True)
     total_break_time_display = serializers.SerializerMethodField(read_only=True)
     total_work_time_display = serializers.SerializerMethodField(read_only=True)
-
-    breaks_taken = serializers.SerializerMethodField(read_only=True)
     current_break = serializers.SerializerMethodField(read_only=True)
-
-    # write-only camelCase fields for frontend
-    startTime = serializers.DateTimeField(
+    startTime = serializers.DateTimeField( 
         source="start_time", write_only=True, required=False
     )
     endTime = serializers.DateTimeField(
@@ -58,42 +61,29 @@ class AttendanceSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = [
             "id",
-
-            # user info
-            "user_id", "user_name", "profile_picture",
-
-            # attendance info
+            "user_id", "full_name", "profile_picture",
             "date", "status",
-
-            # nested
             "breaks",
-
-            # display
             "start_time_display",
             "end_time_display",
             "total_break_time_display",
             "total_work_time_display",
-            "breaks_taken",
             "current_break",
-
-            # write-only
             "startTime",
             "endTime",
         ]
         read_only_fields = [
             "id",
-            "user_id", "user_name", "profile_picture",
+            "user_id", "full_name", "profile_picture",
             "status",
             "breaks",
             "start_time_display",
             "end_time_display",
             "total_break_time_display",
             "total_work_time_display",
-            "breaks_taken",
             "current_break",
         ]
 
-    # ---------- helpers ----------
     def get_profile_picture(self, obj):
         pic = getattr(obj.user, "profile_picture", None)
         if not pic:
@@ -108,19 +98,21 @@ class AttendanceSerializer(serializers.ModelSerializer):
         return format_duration_as_hms(obj.total_work_time)
 
     def get_start_time_display(self, obj):
-        return obj.start_time.strftime("%H:%M:%S") if obj.start_time else None
+        if not obj.start_time:
+            return None
+        local_time = timezone.localtime(obj.start_time)
+        return local_time.strftime("%H:%M:%S")
 
     def get_end_time_display(self, obj):
-        return obj.end_time.strftime("%H:%M:%S") if obj.end_time else None
-
-    def get_breaks_taken(self, obj):
-        return obj.breaks.count()
+        if not obj.end_time:
+            return None
+        local_time = timezone.localtime(obj.end_time)
+        return local_time.strftime("%H:%M:%S")
 
     def get_current_break(self, obj):
         current = obj.breaks.filter(break_end__isnull=True).first()
         return AttendanceBreakSerializer(current).data if current else None
 
-    # ---------- validation ----------
     def validate(self, data):
         start_time = data.get("start_time")
         end_time = data.get("end_time")
@@ -136,30 +128,71 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
         return data
 
+    def _check_leave_status(self, user, date):
+        """Check if user has approved leave on given date"""
+        from leaves.models import Leave
+        
+        approved_leave = Leave.objects.filter(
+            user=user,
+            status='approved',
+            start_date__lte=date,
+            end_date__gte=date
+        ).exists()
+        
+        return AttendanceStatus.LEAVE if approved_leave else None
 
-# ---------------------------
-# Timestamp serializers (DRY)
-# ---------------------------
-class _TimestampSerializer(serializers.Serializer):
-    timestamp = serializers.DateTimeField()
+    def create(self, validated_data):
+        # Check if user is on leave
+        user = validated_data.get('user')
+        date = validated_data.get('date', timezone.localdate())
+        
+        leave_status = self._check_leave_status(user, date)
+        if leave_status:
+            # User has approved leave - prevent attendance creation
+            raise serializers.ValidationError({
+                "error": "Cannot start attendance. You have an approved leave for this date."
+            })
+        
+        # Set status to PRESENT for normal attendance
+        validated_data['status'] = AttendanceStatus.PRESENT
+        
+        return super().create(validated_data)
 
-    def validate_timestamp(self, value):
-        if value > timezone.now():
-            raise serializers.ValidationError("Timestamp cannot be in the future.")
-        return value
-
-
-class StartDaySerializer(_TimestampSerializer):
-    pass
-
-
-class EndDaySerializer(_TimestampSerializer):
-    pass
-
-
-class StartBreakSerializer(_TimestampSerializer):
-    pass
-
-
-class EndBreakSerializer(_TimestampSerializer):
-    pass
+    def update(self, instance, validated_data):
+        # Update fields
+        instance = super().update(instance, validated_data)
+        
+        # Calculate totals if end_time is set (regardless of leave status)
+        if instance.end_time:
+            # Calculate totals
+            total_break = timedelta(0)
+            for br in instance.breaks.all():
+                if br.break_end:
+                    total_break += (br.break_end - br.break_start)
+            
+            total_work = instance.end_time - instance.start_time
+            instance.total_break_time = total_break
+            instance.total_work_time = total_work - total_break
+            
+            # Check if user is on leave
+            leave_status = self._check_leave_status(instance.user, instance.date)
+            if leave_status:
+                instance.status = leave_status
+            else:
+                # If end_time is set and not on leave, mark as OFFLINE
+                instance.status = AttendanceStatus.OFFLINE
+        else:
+            # No end_time set - check current status
+            leave_status = self._check_leave_status(instance.user, instance.date)
+            if leave_status:
+                instance.status = leave_status
+            else:
+                # Check if on break
+                has_active_break = instance.breaks.filter(break_end__isnull=True).exists()
+                if has_active_break:
+                    instance.status = AttendanceStatus.BREAK
+                else:
+                    instance.status = AttendanceStatus.PRESENT
+        
+        instance.save()
+        return instance
